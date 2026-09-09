@@ -1,5 +1,8 @@
 # Execution Kernel Protocol
 
+[![CI](https://github.com/psatomas/execution-kernel-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/psatomas/execution-kernel-protocol/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/github/license/psatomas/execution-kernel-protocol)](LICENSE)
+
 A composable execution infrastructure layer for Web3 intents. Instead of routing every intent through one monolithic solver, competing execution modules are simulated, scored, and the best-scoring one executes on-chain — a market of execution strategies rather than static execution logic.
 
 Built with production intent: explicit trust boundaries, auditable access control, and rigor over speculative scope.
@@ -40,7 +43,25 @@ npm run dev --workspace=apps/frontend
 
 Open `http://localhost:3000`, connect a wallet pointed at `http://127.0.0.1:8545` (chain id `31337`), and the `Route` intent should be selectable end to end — simulate & score both candidate modules, execute, and see the result flow through the indexer to the API back to the console.
 
-To explore the SDK directly instead (no frontend/API involved): `node packages/sdk/examples/quickstart.ts`, after running `./scripts/deploy-local.sh`. To run the contract test suite: `forge test` from `packages/contracts/`.
+| Service | Default port | Started by |
+| --- | --- | --- |
+| anvil (local chain) | `8545` | `scripts/deploy-local.sh` (or run `anvil` yourself first) |
+| `apps/api` | `4000` | `npm run start --workspace=apps/api` |
+| `apps/frontend` | `3000` | `npm run dev --workspace=apps/frontend` |
+
+Other runnable, code-only examples against the same local deployment (no frontend/API involved) — each is a real end-to-end script, not a mock:
+
+- `node packages/sdk/examples/quickstart.ts` — every SDK client (`intentBuilder`, registries, `scorePolicy`, `executionClient`), including a governance `updateWeights()` call.
+- `node apps/execution-node/examples/quickstart.ts` — the off-chain process → solve → submit pipeline (`runIntent(...)`).
+- `node apps/indexer/examples/quickstart.ts` — backfilling kernel events and deriving execution metrics.
+
+To run the contract test suite: `forge test` from `packages/contracts/`. To run the frontend's own real end-to-end test (`e2e/full-flow.spec.ts` — a real headless browser, real wagmi, real chain, real `apps/api`): with `anvil`/`apps/api` already running as above, `npm run e2e` from `apps/frontend/`.
+
+### Troubleshooting
+
+- **Console shows "No intents registered yet." / step 2 onward is greyed out.** Not a bug — the chain your wallet is connected to genuinely has nothing registered on it yet. Run `./scripts/deploy-local.sh` (or restart `anvil` first if you'd already sent any transaction on it — the script requires a fresh chain, since the deployed addresses are only deterministic from nonce 0).
+- **Console appears stuck on "Loading registered intents..." forever, no error shown.** Most likely your wallet is connected to a chain other than local anvil (check the network badge in the header — a red "Wrong network" badge confirms it). `packages/config` currently only has a `localAnvil` deployment entry; connecting via Sepolia or any other chain silently returns no data rather than an error, by design of today's `useKernelClient()` (see `apps/frontend/CLAUDE.md`) — switch your wallet to local anvil.
+- **`scripts/deploy-local.sh` exits with "already has a nonce of N".** Your anvil chain isn't fresh — restart it (a new `anvil` process always starts at nonce 0) and re-run the script.
 
 ---
 
@@ -285,6 +306,8 @@ execution-kernel-protocol/
 ├── package.json                           # npm workspaces root
 ├── tsconfig.base.json                     # shared strict TS config, extended per-package
 ├── .gitignore
+├── LICENSE                                 # Apache-2.0
+├── CONTRIBUTING.md
 └── README.md
 ```
 
@@ -314,6 +337,16 @@ execution-kernel-protocol/
 - Built toward production: prefer explicit, tested logic over cleverness; expand scope (settlement, multi-role access, graph pipelining) only when a concrete need appears, not speculatively
 - System performance is measured and observable by design
 - SDK is the primary integration surface for external adoption
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) — local setup (links back to Getting Started above), what to run before opening a PR, and commit conventions.
+
+## License
+
+[Apache License 2.0](LICENSE).
 
 ---
 
