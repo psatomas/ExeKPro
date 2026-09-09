@@ -6,6 +6,44 @@ Built with production intent: explicit trust boundaries, auditable access contro
 
 ---
 
+## Live Deployment
+
+| URL | Serves | Worker |
+| --- | --- | --- |
+| `https://exekpro.com/` | ExeKPro Protocol Console (`apps/frontend`) | `exekpro-console` |
+| `https://exekpro.com/about` | ExeKPro public website (`apps/landing`) | `exekpro-landing` |
+
+Two independently deployed Cloudflare Workers behind one zone, split by path via Worker Routes (not a Custom Domain, which can't split a hostname by path) — see each app's own `wrangler.jsonc`. The console has no public kernel deployment behind it yet, though — it only reads/writes whatever chain the connecting wallet points at (see Getting Started below), since `packages/config` doesn't have a real testnet/mainnet entry yet.
+
+---
+
+## Getting Started (Local Development)
+
+Prerequisites: Node 22+, [Foundry](https://book.getfoundry.sh/) (`anvil`/`forge`/`cast`), npm.
+
+```bash
+git clone https://github.com/psatomas/execution-kernel-protocol.git
+cd execution-kernel-protocol
+npm install
+
+# 1. Deploy the kernel to a local anvil chain and register the demo ROUTE
+#    intent + both example modules (starts anvil itself if it isn't already
+#    running). See scripts/deploy-local.sh for exactly what this does.
+./scripts/deploy-local.sh
+
+# 2. In a separate terminal: the read-only API
+npm run start --workspace=apps/api
+
+# 3. In another separate terminal: the console
+npm run dev --workspace=apps/frontend
+```
+
+Open `http://localhost:3000`, connect a wallet pointed at `http://127.0.0.1:8545` (chain id `31337`), and the `Route` intent should be selectable end to end — simulate & score both candidate modules, execute, and see the result flow through the indexer to the API back to the console.
+
+To explore the SDK directly instead (no frontend/API involved): `node packages/sdk/examples/quickstart.ts`, after running `./scripts/deploy-local.sh`. To run the contract test suite: `forge test` from `packages/contracts/`.
+
+---
+
 ## System Overview
 
 The Execution Kernel Protocol defines a standardized execution layer for Web3, where user intents are resolved by an on-chain kernel that ranks interchangeable execution strategies and runs the winner.
@@ -206,17 +244,20 @@ execution-kernel-protocol/
 │       ├── e2e/
 │       │   └── full-flow.spec.ts          # Playwright: the full flow end to end, real browser — see CLAUDE.md
 │       ├── playwright.config.ts
+│       ├── wrangler.jsonc                 # Worker name exekpro-console, Route exekpro.com/*
+│       ├── open-next.config.ts
 │       ├── package.json
 │       └── tsconfig.json
 │
-│   └── landing/                            # exekpro.com — public marketing site (Next.js App Router)
+│   └── landing/                            # exekpro.com/about — public marketing site (Next.js App Router)
 │       ├── src/
 │       │   ├── app/
-│       │   │   ├── layout.tsx              # metadata: title/description/OG/canonical
+│       │   │   ├── layout.tsx              # metadata: title/description/OG/canonical, basePath-aware ("/about")
 │       │   │   ├── page.tsx                # composes every section, in order
 │       │   │   ├── globals.css             # single deliberate dark theme, not dual-theme like the console
-│       │   │   ├── icon.svg                # favicon (Next's file-convention icon)
-│       │   │   └── opengraph-image.tsx     # generated OG image (next/og ImageResponse)
+│       │   │   ├── icon.png / apple-icon.png
+│       │   │   └── opengraph-image-asset/route.tsx # generated OG image (next/og ImageResponse), a plain
+│       │   │                                        # route rather than Next's file-convention — see CLAUDE.md
 │       │   ├── components/
 │       │   │   ├── layout/                 # SiteHeader, SiteFooter, Wordmark
 │       │   │   ├── sections/               # Hero, Problem, HowItWorks, ExecutionQuoteSection,
@@ -224,20 +265,22 @@ execution-kernel-protocol/
 │       │   │   │                           # Validation, SecurityPrinciples, RoadmapStatus, FinalCTA
 │       │   │   └── ui/                     # Container, SectionHeading, Pill, FlowDiagram, StatTile, CTALink
 │       │   └── lib/
-│       │       └── links.ts                # GITHUB_URL/CONSOLE_URL/DOCS_URL — one place to update when real
+│       │       ├── links.ts                # GITHUB_URL/CONSOLE_URL/DOCS_URL
+│       │       └── basePath.ts             # shared "/about" constant — next.config.ts + next/image src both use it
+│       ├── wrangler.jsonc                  # Worker name exekpro-landing, Routes exekpro.com/about, exekpro.com/about/*
+│       ├── open-next.config.ts
 │       ├── package.json                    # deliberately no wagmi/viem/sdk deps — pure static marketing content
 │       └── tsconfig.json
 │
-├── scripts/
-│   ├── deploy.ts
-│   ├── simulate-intents.ts
-│   └── benchmark-execution.ts             # Execution performance validation
+├── .github/workflows/
+│   ├── ci.yml                              # forge test + npm run typecheck, every PR
+│   ├── deploy-console.yml                  # apps/frontend -> exekpro-console, on push to main
+│   └── deploy-landing.yml                  # apps/landing -> exekpro-landing, on push to main
 │
-├── docs/
-│   ├── architecture.md
-│   ├── intents.md
-│   ├── execution-graph.md
-│   └── threat-model.md
+├── scripts/
+│   └── deploy-local.sh                     # one-command local kernel deploy + demo intent/module registration
+│
+├── docs/                                   # placeholder — not yet populated
 │
 ├── package.json                           # npm workspaces root
 ├── tsconfig.base.json                     # shared strict TS config, extended per-package
