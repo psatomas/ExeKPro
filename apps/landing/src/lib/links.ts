@@ -5,7 +5,7 @@
  */
 
 /** The actual public repository -- confirmed from the monorepo's own git remote. */
-export const GITHUB_URL = "https://github.com/psatomas/execution-kernel-protocol";
+export const GITHUB_URL = "https://github.com/psatomas/ExeKPro";
 
 /**
  * The protocol console (apps/frontend), deployed as its own Cloudflare
