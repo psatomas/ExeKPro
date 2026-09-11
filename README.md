@@ -1,7 +1,7 @@
-# Execution Kernel Protocol
+# ExeKPro (Execution Kernel Protocol)
 
-[![CI](https://github.com/psatomas/execution-kernel-protocol/actions/workflows/ci.yml/badge.svg)](https://github.com/psatomas/execution-kernel-protocol/actions/workflows/ci.yml)
-[![License: Apache-2.0](https://img.shields.io/github/license/psatomas/execution-kernel-protocol)](LICENSE)
+[![CI](https://github.com/psatomas/ExeKPro/actions/workflows/ci.yml/badge.svg)](https://github.com/psatomas/ExeKPro/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/github/license/psatomas/ExeKPro)](LICENSE)
 
 A composable execution infrastructure layer for Web3 intents. Instead of routing every intent through one monolithic solver, competing execution modules are simulated, scored, and the best-scoring one executes on-chain — a market of execution strategies rather than static execution logic.
 
@@ -25,8 +25,8 @@ Two independently deployed Cloudflare Workers behind one zone, split by path via
 Prerequisites: Node 22+, [Foundry](https://book.getfoundry.sh/) (`anvil`/`forge`/`cast`), npm.
 
 ```bash
-git clone https://github.com/psatomas/execution-kernel-protocol.git
-cd execution-kernel-protocol
+git clone https://github.com/psatomas/ExeKPro.git
+cd ExeKPro
 npm install
 
 # 1. Deploy the kernel to a local anvil chain and register the demo ROUTE
@@ -112,7 +112,7 @@ Each module is:
 ## Repository Structure
 
 ```text
-execution-kernel-protocol/
+ExeKPro/
 
 ├── packages/
 │
