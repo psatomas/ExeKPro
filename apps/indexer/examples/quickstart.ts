@@ -39,7 +39,7 @@ async function main() {
   await kernel.scorePolicy.updateWeights({ qualityWeight: 1n, costWeight: 1n, mevWeight: 50n, latencyWeight: 1n });
   await kernel.execution.executeIntent({ intentType: ROUTE, intentData: "0x" });
 
-  const indexer = await createIndexer({ publicClient, addresses: localAnvilAddresses, fromBlock: 0n });
+  const indexer = await createIndexer({ publicClient, addresses: localAnvilAddresses });
 
   console.log("total executions:", indexer.totalExecutions());
   console.log("executions by module:", indexer.executionsByModule());

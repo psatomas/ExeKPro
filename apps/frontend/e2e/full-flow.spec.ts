@@ -185,7 +185,7 @@ test("connect wallet -> read registry -> construct intent -> simulate -> execute
   // 8. indexer observes event -- the real apps/indexer package, called
   // directly here (not through apps/api), to prove this layer independently
   // of the API that wraps it.
-  const indexer = await createIndexer({ publicClient, addresses: localAnvilAddresses, fromBlock: 0n });
+  const indexer = await createIndexer({ publicClient, addresses: localAnvilAddresses });
   expect(indexer.totalExecutions(ROUTE_INTENT_TYPE)).toBe(before.totalExecutions + 1);
 
   // 9. API exposes updated metrics -- a separate process, a separate HTTP
