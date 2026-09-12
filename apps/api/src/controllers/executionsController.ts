@@ -1,6 +1,4 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { createIndexer } from "@execution-kernel-protocol/indexer";
-import { localAnvilAddresses } from "@execution-kernel-protocol/config";
 import type { Bytes32 } from "@execution-kernel-protocol/types";
 import { toJsonSafe } from "../utils/json.ts";
 
@@ -13,21 +11,23 @@ const DEFAULT_LIMIT = 20;
  * (blockNumber/transactionHash/user/selectedModule/result) this just reads
  * back out. Most-recent-first, capped at `limit` (default 20) so this
  * can't return an unbounded response as history grows.
+ *
+ * Reads the one shared indexer decorated onto the server in
+ * apps/api/src/index.ts (built from this process's actual configured
+ * deployment, not a hardcoded one) instead of constructing a fresh one --
+ * sync() incrementally catches up before every read, it never rescans
+ * from block 0 here.
  */
 export async function listExecutions(
   request: FastifyRequest<{ Querystring: { intentType?: string; limit?: string } }>,
   reply: FastifyReply,
 ) {
-  const indexer = await createIndexer({
-    publicClient: request.server.publicClient,
-    addresses: localAnvilAddresses,
-    fromBlock: 0n,
-  });
+  await request.server.indexer.sync();
 
   const intentType = request.query.intentType as Bytes32 | undefined;
   const limit = Math.min(Number(request.query.limit ?? DEFAULT_LIMIT) || DEFAULT_LIMIT, 100);
 
-  const all = indexer.store.getExecutions();
+  const all = request.server.indexer.store.getExecutions();
   const filtered = intentType ? all.filter((e) => e.intentType === intentType) : all;
   const recent = filtered.slice(-limit).reverse();
 
