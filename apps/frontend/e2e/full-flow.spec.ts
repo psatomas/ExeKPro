@@ -10,10 +10,12 @@
  *   frontend displays result
  *
  * No real MetaMask extension exists in this environment, so the one thing
- * replaced is the wallet's UI popup: an EIP-1193 provider is injected into
- * the page (both legacy window.ethereum and EIP-6963 announcement, so
- * wagmi's injected() connector finds it either way) that proxies every RPC
- * call straight to anvil. anvil auto-signs eth_sendTransaction for its own
+ * replaced is the wallet's UI popup: a legacy window.ethereum EIP-1193
+ * provider is injected into the page (wagmiConfig.ts runs with
+ * multiInjectedProviderDiscovery: false and one explicit connector -- see
+ * lib/injectedLocalDisconnect.ts -- so there's no EIP-6963 announcement to
+ * make here) that proxies every RPC call straight to anvil. anvil
+ * auto-signs eth_sendTransaction for its own
  * unlocked default accounts (confirmed with a raw curl before writing this),
  * so no private key material is needed in the browser at all -- the
  * frontend code path (wagmi -> sdk -> executeIntent) is exercised exactly
@@ -82,6 +84,7 @@ test("connect wallet -> read registry -> construct intent -> simulate -> execute
       }
 
       const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
+      const requestedMethods: string[] = [];
 
       // Real wallets only return an account from the SILENT eth_accounts
       // check once the site has actually been granted permission -- a
@@ -95,6 +98,7 @@ test("connect wallet -> read registry -> construct intent -> simulate -> execute
       const provider = {
         isMetaMask: false,
         request: async ({ method, params }: { method: string; params?: unknown[] }) => {
+          requestedMethods.push(method);
           if (method === "eth_requestAccounts") {
             connected = true;
             return [account];
@@ -114,38 +118,41 @@ test("connect wallet -> read registry -> construct intent -> simulate -> execute
         },
       };
 
-      // Legacy injection.
+      // Legacy injection only. wagmiConfig.ts deliberately runs with
+      // multiInjectedProviderDiscovery: false and a single explicit
+      // connector (see lib/injectedLocalDisconnect.ts) -- disabling
+      // discovery is what guarantees every connector the app can render
+      // goes through the wrapped, local-only-disconnect connector, with no
+      // second, real-`injected()`-backed connector for wagmi to auto-add
+      // from an EIP-6963 announcement. So there's exactly one connector
+      // here too, targeting window.ethereum, same as it would for a real
+      // visitor with exactly one wallet extension installed.
       (window as unknown as { ethereum: unknown }).ethereum = provider;
-
-      // EIP-6963 multi-wallet discovery, which wagmi's injected() connector
-      // prefers when available.
-      const info = {
-        uuid: "e2e-fake-wallet-0000-0000-000000000000",
-        name: "E2E Test Wallet",
-        icon: "data:image/svg+xml;base64,PHN2Zy8+",
-        rdns: "protocol.e2e.test-wallet",
-      };
-      function announce() {
-        window.dispatchEvent(
-          new CustomEvent("eip6963:announceProvider", { detail: Object.freeze({ info, provider }) }),
-        );
-      }
-      window.addEventListener("eip6963:requestProvider", announce);
-      announce();
+      (window as unknown as { __e2eWalletRequestedMethods: string[] }).__e2eWalletRequestedMethods = requestedMethods;
     },
     { account: ACCOUNT, rpcUrl: localAnvil.rpcUrls.default.http[0], chainIdHex: "0x7a69" },
   );
 
-  // 1. connect wallet
-  // wagmi's multiInjectedProviderDiscovery means BOTH the legacy
-  // window.ethereum assignment and the EIP-6963 announcement below
-  // register as separate connectors -- correctly, that's what lets a real
-  // user with several real wallets installed pick between them. Target
-  // this fake wallet by its specific announced name, not an ordinal
-  // .first(), so this doesn't race against however many connectors exist.
+  // 1. connect wallet -- the one connector renders as "Connect Injected"
+  // (the targetless injected() connector's default name).
   await page.goto("/");
-  await page.getByRole("button", { name: /E2E Test Wallet/ }).click();
+  await page.getByRole("button", { name: /Connect Injected/ }).click();
   // ConnectWallet.tsx renders `${address.slice(0, 6)}...${address.slice(-4)}`.
+  await expect(page.getByText(/0xf39F\.\.\.2266/)).toBeVisible({ timeout: 15_000 });
+
+  // Disconnect must be application-local: it clears wagmi's session but
+  // never sends MetaMask's permission-revocation RPC. Reconnect immediately
+  // afterward, with no settle polling/retry delay, to protect the real
+  // regression where an in-flight revoke blocked the next permission prompt.
+  await page.getByRole("button", { name: "Disconnect" }).click();
+  const connectButton = page.getByRole("button", { name: /Connect Injected/ });
+  await expect(connectButton).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __e2eWalletRequestedMethods: string[] }).__e2eWalletRequestedMethods,
+    ),
+  ).not.toContain("wallet_revokePermissions");
+  await connectButton.click();
   await expect(page.getByText(/0xf39F\.\.\.2266/)).toBeVisible({ timeout: 15_000 });
 
   // 2. read registry (useIntents -> kernel.intentRegistry.getAllIntents/getIntent)
