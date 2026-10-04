@@ -1,6 +1,6 @@
 import { createConfig, http } from "wagmi";
-import { injected } from "wagmi/connectors";
 import { localAnvil, sepolia } from "@execution-kernel-protocol/config";
+import { injectedLocalDisconnect } from "./injectedLocalDisconnect";
 
 /**
  * Local anvil (dev) plus Sepolia (the one real testnet this repo targets --
@@ -19,10 +19,27 @@ import { localAnvil, sepolia } from "@execution-kernel-protocol/config";
  * first render, and those two renders disagreeing is a React hydration
  * mismatch. Any real visitor with a wallet extension installed would hit
  * this, not just an injected test provider.
+ *
+ * connectors: [injectedLocalDisconnect()] -- not the stock `injected()`,
+ * and multiInjectedProviderDiscovery is explicitly off, deliberately, as
+ * one decision: see injectedLocalDisconnect.ts for why Disconnect must not
+ * call wallet_revokePermissions. That fix only helps if every connector the
+ * app can render goes through it -- with EIP-6963 discovery left on, wagmi
+ * auto-adds a *separate*, real stock `injected()` connector for MetaMask's
+ * own announcement (this is exactly why production showed two buttons,
+ * "Connect Injected" and "Connect MetaMask"), which would keep calling the
+ * real revoke on disconnect regardless of anything configured here.
+ * Discovery has no supported hook to wrap/replace the connectors it
+ * creates, so turning it off and keeping a single explicit, wrapped
+ * connector is the only way to guarantee there is no bypass -- one
+ * "Connect Injected" control instead of two. This app's model was already
+ * "one browser wallet, pointed at anvil or Sepolia," not multi-wallet
+ * selection, so this doesn't remove a capability the app relied on.
  */
 export const wagmiConfig = createConfig({
   chains: [localAnvil, sepolia],
-  connectors: [injected()],
+  connectors: [injectedLocalDisconnect()],
+  multiInjectedProviderDiscovery: false,
   transports: {
     [localAnvil.id]: http(),
     [sepolia.id]: http("https://ethereum-sepolia-rpc.publicnode.com"),
