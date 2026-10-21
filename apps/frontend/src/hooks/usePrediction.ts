@@ -5,6 +5,7 @@ import type { Address } from "viem";
 import { solve } from "@execution-kernel-protocol/execution-node";
 import type { ExecutionKernelClient } from "@execution-kernel-protocol/sdk";
 import type { Bytes32 } from "@execution-kernel-protocol/types";
+import type { PredictionResult } from "@/lib/predictionPresentation";
 
 /**
  * Off-chain, gas-free prediction of which registered module would currently
@@ -19,8 +20,15 @@ export function usePrediction(
   user: Address | undefined,
 ) {
   return useQuery({
-    queryKey: ["prediction", intentType, user],
-    queryFn: () => solve(kernel!, intentType!, user!, "0x"),
+    queryKey: ["prediction", kernel?.execution.address, intentType, user],
+    queryFn: async (): Promise<PredictionResult> => ({
+      ...(await solve(kernel!, intentType!, user!, "0x")),
+      request: {
+        executionEngine: kernel!.execution.address,
+        intentType: intentType!,
+        user: user!,
+      },
+    }),
     enabled: !!kernel && !!intentType && !!user,
     retry: false,
   });

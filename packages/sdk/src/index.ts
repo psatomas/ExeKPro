@@ -41,6 +41,12 @@ export function createExecutionKernelClient(config: CreateExecutionKernelClientC
   const { addresses, publicClient, walletClient } = config;
 
   return {
+    /**
+     * Captures a chain head for a coherent read-only evaluation snapshot.
+     * Callers pass the returned block number to every subsequent contract
+     * read, rather than mixing data from independently advancing heads.
+     */
+    getBlockNumber: () => publicClient.getBlockNumber({ cacheTime: 0 }),
     protocolRoles: createProtocolRolesClient({ address: addresses.protocolRoles, publicClient, walletClient }),
     intentRegistry: createIntentRegistryClient({ address: addresses.intentRegistry, publicClient, walletClient }),
     moduleRegistry: createModuleRegistryClient({ address: addresses.moduleRegistry, publicClient, walletClient }),

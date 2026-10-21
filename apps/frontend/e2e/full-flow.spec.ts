@@ -167,13 +167,18 @@ test("connect wallet -> read registry -> construct intent -> simulate -> execute
   await expect(page.getByText(ROUTE_INTENT_TYPE, { exact: false })).toBeVisible();
 
   // 4. simulate -- off-chain, gas-free (execution-node's solve(), via
-  // usePrediction). Strengthened, not just carried over: the redesigned
-  // console shows every candidate's real score, not just the winner's tag,
-  // so assert the competition itself is visible -- both real modules
-  // present with a score each, and exactly one marked "Selected".
+  // usePrediction). The console shows the deployed ScorePolicy formula,
+  // its initial 1/1/1/1 weights, each candidate's actual calculation, and
+  // the winner selected by the engine's strict-greater comparison.
   await expect(page.getByText("Router Module")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("MEV Protection Module")).toBeVisible();
-  await expect(page.getByText("Selected", { exact: true })).toBeVisible();
+  await expect(page.getByText(/score = \(quality × quality weight\)/)).toBeVisible();
+  await expect(page.getByText(/Evaluation snapshot: block \d+/)).toBeVisible();
+  await expect(page.getByText("+ Quality")).toBeVisible();
+  await expect(page.getByText("− Cost")).toBeVisible();
+  await expect(page.getByText("score 990", { exact: true })).toBeVisible();
+  await expect(page.getByText("score 729", { exact: true })).toBeVisible();
+  await expect(page.getByText("Selected · highest score", { exact: true })).toBeVisible();
 
   // 5/6/7. wallet confirmation (auto-approved by the injected provider,
   // in place of a human clicking "Confirm") -> executeIntent() -> submitted
@@ -214,6 +219,7 @@ test("connect wallet -> read registry -> construct intent -> simulate -> execute
   await expect(page.getByText(new RegExp(`Total executions: ${before.totalExecutions + 1}`))).toBeVisible({
     timeout: 15_000,
   });
+  await expect(page.getByText("Evidence: the confirmed receipt contains the ExecutionEngine IntentExecuted event shown above.")).toBeVisible();
 
   // Also: the new Recent executions panel (apps/api's /executions,
   // wrapping apps/indexer's raw per-transaction records, previously never

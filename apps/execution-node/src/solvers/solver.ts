@@ -1,10 +1,11 @@
 import type { Address } from "viem";
 import type { ExecutionKernelClient } from "@execution-kernel-protocol/sdk";
 import type { Bytes32, Hex } from "@execution-kernel-protocol/types";
-import { buildExecutionGraph, type ExecutionCandidate } from "../engine/executionGraphBuilder.ts";
+import { buildExecutionGraph, type ExecutionCandidate, type ExecutionGraph } from "../engine/executionGraphBuilder.ts";
 
 export interface SolveResult {
   intentType: Bytes32;
+  snapshot: ExecutionGraph["snapshot"];
   winner: ExecutionCandidate;
   candidates: ExecutionCandidate[];
 }
@@ -33,5 +34,5 @@ export async function solve(
     throw new Error(`no module currently supports intentType ${intentType} (or none are registered)`);
   }
 
-  return { intentType, winner: graph.predictedWinner, candidates: graph.candidates };
+  return { intentType, snapshot: graph.snapshot, winner: graph.predictedWinner, candidates: graph.candidates };
 }

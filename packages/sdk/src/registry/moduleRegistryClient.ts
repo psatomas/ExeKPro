@@ -22,12 +22,13 @@ export function createModuleRegistryClient(config: ModuleRegistryClientConfig) {
   return {
     address,
 
-    async getModules(intentType: Bytes32): Promise<readonly Address[]> {
+    async getModules(intentType: Bytes32, blockNumber?: bigint): Promise<readonly Address[]> {
       return publicClient.readContract({
         address,
         abi: moduleRegistryAbi,
         functionName: "getModules",
         args: [intentType],
+        blockNumber,
       });
     },
 
