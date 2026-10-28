@@ -1,0 +1,36 @@
+# Execution model
+
+## Current flow — verified
+
+1. A caller invokes `executeIntent(intentType, intentData)`.
+2. The engine assigns `user = msg.sender`, checks intent activity, obtains active modules, and scores successful simulations.
+3. It executes the selected module and emits `IntentExecuted` with module-provided opaque bytes.
+
+Candidate simulation faults are skipped; selected-module failure reverts the transaction. This flow has no signature, nonce, deadline, route constraint, token handling, or settlement verification.
+
+## Proposed authorized swap lifecycle
+
+1. SDK constructs a typed `SwapRequest` that includes signer, nonce, deadline, input/output assets, amount, minimum output, recipient, adapter/route constraints, and route data or a route commitment.
+2. Customer authorizes the exact request. The authorization mechanism is an open ADR.
+3. Kernel validates signer authority, one-time nonce, expiry, typed constraints, and approved adapter/route.
+4. Kernel invokes the adapter; it performs the actual local AMM call.
+5. Kernel measures authoritative balance changes, checks minimum output and recipient semantics, and emits a typed receipt containing request identity and settlement evidence.
+
+Any failure reverts atomically. Receipt data supplements transaction receipts; it must not be an adapter’s unsupported assertion.
+
+## Authorization alternatives
+
+| Alternative | Benefit | Tradeoff |
+| --- | --- | --- |
+| Direct wallet call | Smallest surface | Does not independently bind an off-chain prepared request. |
+| EIP-712 per-swap signature | Relayer-compatible, explicit parameter binding | Requires signature validation and nonce design. |
+| Persistent policy/delegation | Better recurring UX | Broad authority and revocation complexity. |
+
+The authorization model remains **Proposed**, not implemented or accepted.
+Direct wallet and relayed execution are submission paths that may be compatible
+with the chosen authorization model; they do not decide it. See
+[ADR-001](ADR/ADR-001-swap-authorization.md).
+
+## Adapter and failure duties
+
+Adapters must be approved, constrained to route semantics, and unable to replace kernel validation. Token custody/approvals, permit support, fee-on-transfer behavior, route encoding, and whether automatic scoring selects routes are unresolved. Failures in authorization, policy, adapter call, or verification revert the operation. See [SECURITY_MODEL.md](SECURITY_MODEL.md).
