@@ -22,7 +22,14 @@ The selected module may execute arbitrary module-defined logic and its revert re
 
 ## Documentation conflicts
 
-The root README describes selected-module execution as on-chain settlement, although the current example modules are explicitly placeholders. Existing B2B/provisioning material can be read as settling a dedicated-deployment model; the architecture decision remains open. Any landing claim about live modules or material MEV protection should be reconciled with the placeholder implementation before it is treated as product evidence.
+The root README describes selected-module execution as on-chain settlement,
+although the current example modules are explicitly placeholders. The README,
+landing material, and any other legacy claims about real settlement, live
+modules, or material MEV protection require reconciliation with the actual
+placeholder behavior before they are treated as product evidence. This is a
+documented follow-up, not a change to legacy materials in this task. Existing
+B2B/provisioning material can be read as settling a dedicated-deployment model;
+the architecture decision remains open.
 
 ## Recommended path
 

@@ -2,7 +2,7 @@
 
 ## Definition
 
-The first MVP milestone is a genuine ERC-20 swap executed through ExeKPro in one local Anvil environment. It is complete only when on-chain state, not a module-returned claim, proves settlement.
+The first MVP milestone is a genuine ERC-20 swap executed through ExeKPro in one local Anvil environment. It is complete only when on-chain state, not a module-returned claim, proves settlement. The MVP comprises M1–M3: M1 establishes authorized execution constraints, M2 demonstrates verifiable settlement, and M3 delivers the consumable SDK workflow. Durable history and Cloud infrastructure are post-MVP work.
 
 ## Required capability
 

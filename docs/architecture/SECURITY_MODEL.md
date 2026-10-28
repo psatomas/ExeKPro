@@ -17,7 +17,20 @@ Current registries and score weights are owner-gated, and candidate simulation f
 
 ## Token and settlement assumptions to resolve
 
-The MVP must explicitly choose pre-approval, temporary custody, permit, or another input-token model. It must either exclude nonstandard/fee-on-transfer tokens or define balance-accounting support. The settlement invariant is: for a successful request, actual state change satisfies the exact authorized constraints and evidence identifies the request; otherwise the transaction reverts without partial settlement.
+The MVP must explicitly choose pre-approval, temporary custody, permit, or another input-token model. It must either exclude nonstandard/fee-on-transfer tokens or define balance-accounting support.
+
+Before M2, the design must specify the input supplier, output recipient,
+measured balances, and whether input consumption is exact or bounded. It must
+also specify the adapter's permitted external effects and the kernel checks
+that constrain them. A receipt is verifiable settlement evidence only when its
+typed fields, associated event/transaction evidence, and authoritative balance
+measurements let a verifier connect the authorized request to the enforced
+outcome; adapter-returned bytes alone are insufficient.
+
+The target settlement invariant is: for a successful request, actual state
+change satisfies the exact authorized constraints and evidence identifies the
+request; otherwise the transaction reverts without partial settlement. These
+are design requirements, not protections implemented in the current code.
 
 ## Required tests
 

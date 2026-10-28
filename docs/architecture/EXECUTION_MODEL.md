@@ -18,6 +18,24 @@ Candidate simulation faults are skipped; selected-module failure reverts the tra
 
 Any failure reverts atomically. Receipt data supplements transaction receipts; it must not be an adapter’s unsupported assertion.
 
+## Settlement questions to resolve before M2
+
+The following target semantics are required before Verified Swap Execution is
+implemented; none is provided by the current engine or placeholder modules.
+
+- **Balances and participants:** define which account supplies input, which
+  account receives output, which balances are measured before and after the
+  call, and how the kernel identifies those participants.
+- **Input-consumption limits:** define whether the authorized input amount is
+  exact or a maximum, how token fees/nonstandard transfers affect accounting,
+  and how the kernel proves the adapter did not consume more than authorized.
+- **Adapter effects and trust boundary:** define the adapter's permitted calls,
+  token approvals/custody interactions, route data, and all effects the kernel
+  must validate rather than trust from adapter-returned data.
+- **Verifiable receipt:** define the receipt fields and event/transaction
+  evidence needed to link a request to measured settlement, distinguish it from
+  a module assertion, and support later indexing.
+
 ## Authorization alternatives
 
 | Alternative | Benefit | Tradeoff |
