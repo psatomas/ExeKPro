@@ -33,12 +33,13 @@ export function createModuleClient(config: ModuleClientConfig) {
       return { address: module, moduleId, name, version };
     },
 
-    async supportsIntent(module: Address, intentType: Bytes32): Promise<boolean> {
+    async supportsIntent(module: Address, intentType: Bytes32, blockNumber?: bigint): Promise<boolean> {
       return publicClient.readContract({
         address: module,
         abi: executionModuleAbi,
         functionName: "supportsIntent",
         args: [intentType],
+        blockNumber,
       });
     },
 
@@ -57,12 +58,13 @@ export function createModuleClient(config: ModuleClientConfig) {
      * performs internally, exposed so callers can preview a module's quote
      * before executeIntent() runs the real selection across all modules.
      */
-    async simulateQuote(module: Address, user: Address, intentData: Hex, context: Hex): Promise<ExecutionQuote> {
+    async simulateQuote(module: Address, user: Address, intentData: Hex, context: Hex, blockNumber?: bigint): Promise<ExecutionQuote> {
       const raw = await publicClient.readContract({
         address: module,
         abi: executionModuleAbi,
         functionName: "simulate",
         args: [user, intentData, context],
+        blockNumber,
       });
 
       const [quote] = decodeAbiParameters(

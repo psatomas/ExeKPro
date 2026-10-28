@@ -15,23 +15,25 @@ export function createScorePolicyClient(config: ScorePolicyClientConfig) {
   return {
     address,
 
-    async getWeights(): Promise<ScorePolicyWeights> {
+    async getWeights(blockNumber?: bigint): Promise<ScorePolicyWeights> {
       const [qualityWeight, costWeight, mevWeight, latencyWeight] = await publicClient.readContract({
         address,
         abi: scorePolicyAbi,
         functionName: "weights",
+        blockNumber,
       });
 
       return { qualityWeight, costWeight, mevWeight, latencyWeight };
     },
 
     /** Read-only — same scoring evaluate() does on-chain, without needing a module's live quote. */
-    async evaluate(quote: ExecutionQuote): Promise<ExecutionScore> {
+    async evaluate(quote: ExecutionQuote, blockNumber?: bigint): Promise<ExecutionScore> {
       return publicClient.readContract({
         address,
         abi: scorePolicyAbi,
         functionName: "evaluate",
         args: [quote],
+        blockNumber,
       });
     },
 

@@ -3,15 +3,20 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient } from "wagmi";
-import type { Bytes32, ExecutionModuleInfo } from "@execution-kernel-protocol/types";
+import { parseEventLogs } from "viem";
+import { executionEngineAbi } from "@execution-kernel-protocol/sdk";
+import type { Address } from "viem";
+import type { Bytes32, ExecutionModuleInfo, Hex } from "@execution-kernel-protocol/types";
 import { useKernelClient } from "@/hooks/useKernelClient";
 import { useIntents } from "@/hooks/useIntents";
 import { useModules } from "@/hooks/useModules";
 import { usePrediction } from "@/hooks/usePrediction";
 import { useExecutionMetrics } from "@/hooks/useExecutionMetrics";
+import { getVisiblePrediction } from "@/lib/predictionPresentation";
 import { Panel, PanelRow } from "@/components/ui/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { CandidateModuleRow } from "@/components/execution/CandidateModuleRow";
+import { ScoringPolicy } from "@/components/execution/ScoringPolicy";
 import { OverviewStats } from "@/components/protocol/OverviewStats";
 import { RecentExecutions } from "@/components/metrics/RecentExecutions";
 
@@ -40,6 +45,8 @@ export function ExecutionConsole() {
   const [blockNumber, setBlockNumber] = useState<bigint>();
   const [gasUsed, setGasUsed] = useState<bigint>();
   const [executionError, setExecutionError] = useState<string>();
+  const [executedModule, setExecutedModule] = useState<Address>();
+  const [executionResult, setExecutionResult] = useState<Hex>();
 
   async function handleExecute() {
     if (!kernel || !selected || !address) return;
@@ -49,6 +56,8 @@ export function ExecutionConsole() {
     setTxHash(undefined);
     setBlockNumber(undefined);
     setGasUsed(undefined);
+    setExecutedModule(undefined);
+    setExecutionResult(undefined);
 
     try {
       const { hash } = await kernel.execution.executeIntent({ intentType: selected, intentData: "0x" }, address);
@@ -66,6 +75,10 @@ export function ExecutionConsole() {
 
       setBlockNumber(receipt.blockNumber);
       setGasUsed(receipt.gasUsed);
+      const executed = parseEventLogs({ abi: executionEngineAbi, eventName: "IntentExecuted", logs: receipt.logs, strict: false })
+        .find((event) => event.address.toLowerCase() === kernel.execution.address.toLowerCase());
+      setExecutedModule(executed?.args.selectedModule);
+      setExecutionResult(executed?.args.result);
       setPhase("confirmed");
 
       // chain event -> indexer -> api -> here.
@@ -82,7 +95,10 @@ export function ExecutionConsole() {
     return <p className="p-6 text-sm text-muted">Connecting to chain...</p>;
   }
 
-  const winnerAddress = predictionQuery.data?.winner.module.toLowerCase();
+  const visiblePrediction = getVisiblePrediction(predictionQuery, kernel && selected && address
+    ? { executionEngine: kernel.execution.address, intentType: selected, user: address }
+    : undefined);
+  const winnerAddress = visiblePrediction?.winner.module.toLowerCase();
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -119,16 +135,23 @@ export function ExecutionConsole() {
             {predictionQuery.isError && (
               <p className="text-sm text-danger">{(predictionQuery.error as Error).message}</p>
             )}
-            {!address && !predictionQuery.data && (
+            {!address && !visiblePrediction && (
               <p className="text-sm text-muted">Connect a wallet to simulate execution.</p>
             )}
+            {visiblePrediction && (
+              <ScoringPolicy
+                weights={visiblePrediction.snapshot.weights}
+                blockNumber={visiblePrediction.snapshot.blockNumber}
+              />
+            )}
             <div className="flex flex-col gap-2">
-              {predictionQuery.data?.candidates.map((candidate) => (
+              {visiblePrediction?.candidates.map((candidate) => (
                 <CandidateModuleRow
                   key={candidate.module}
                   candidate={candidate}
                   moduleInfo={moduleInfoByAddress.get(candidate.module.toLowerCase())}
                   isWinner={candidate.module.toLowerCase() === winnerAddress}
+                  weights={visiblePrediction.snapshot.weights}
                 />
               ))}
             </div>
@@ -173,7 +196,22 @@ export function ExecutionConsole() {
                       <dd className="text-ink tabular-nums">{gasUsed.toString()}</dd>
                     </>
                   )}
+                  {executedModule && (
+                    <>
+                      <dt className="text-faint">event winner</dt>
+                      <dd className="text-ink">{executedModule}</dd>
+                    </>
+                  )}
+                  {executionResult && (
+                    <>
+                      <dt className="text-faint">event result</dt>
+                      <dd className="break-all text-ink">{executionResult}</dd>
+                    </>
+                  )}
                 </dl>
+              )}
+              {phase === "confirmed" && executedModule && (
+                <p className="text-xs leading-relaxed text-faint">Evidence: the confirmed receipt contains the ExecutionEngine IntentExecuted event shown above.</p>
               )}
               {executionError && <p className="text-sm text-danger">{executionError}</p>}
             </div>
